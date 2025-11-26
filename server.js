@@ -12,9 +12,12 @@ const jwt = require('jsonwebtoken');
 
 // --- Database Imports ---
 const { connectDB } = require('./config/database'); 
-const User = require('./models/User.js');  
-const Goal = require('./models/Goal.js'); 
-const Log = require('./models/Log.js');   
+
+// 👇 MODEL IMPORT FIXES BASED ON YOUR FILE NAMES
+const User = require('./models/User.js');  // Kept Capital 'U' (Matches file)
+const Goal = require('./models/goal.js');  // Changed to lowercase 'g'
+const Log = require('./models/log.js');    // Changed to lowercase 'l'
+
 const { protect } = require('./middleware/auth'); 
 const goalRoutes = require('./routes/goalRoutes'); 
 const logRoutes = require('./routes/logRoutes');
@@ -39,7 +42,7 @@ Log.belongsTo(User, { foreignKey: 'userId' });
 
 
 // ------------------------------------------------------------------
-// --- 2. The Registration API Endpoint (FIXED) ---
+// --- 2. The Registration API Endpoint ---
 // ------------------------------------------------------------------
 app.post('/register', async (req, res) => {
     const { email, password, first_name, last_name, role } = req.body;
@@ -67,14 +70,14 @@ app.post('/register', async (req, res) => {
             role: role || 'Member'
         });
 
-        // ✨ FIX: Generate Token immediately upon registration
+        // Generate Token immediately upon registration
         const token = jwt.sign(
             { id: newUser.id, role: newUser.role },
             process.env.JWT_SECRET, 
             { expiresIn: '1h' }
         );
 
-        // ✨ FIX: Return the token AND the user
+        // Return the token AND the user
         return res.status(201).json({ 
             success: true, 
             message: 'User registered successfully!',
