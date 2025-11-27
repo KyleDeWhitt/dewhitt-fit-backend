@@ -15,8 +15,8 @@ const { connectDB } = require('./config/database');
 
 // 👇 MODEL IMPORT FIXES BASED ON YOUR FILE NAMES
 const User = require('./models/User.js');  // Kept Capital 'U' (Matches file)
-const Goal = require('./models/goal.js');  // Changed to lowercase 'g'
-const Log = require('./models/log.js');    // Changed to lowercase 'l'
+const Goal = require('./models/Goal.js');  // Changed to lowercase 'g'
+const Log = require('./models/Log.js');    // Changed to lowercase 'l'
 
 const { protect } = require('./middleware/auth'); 
 const goalRoutes = require('./routes/goalRoutes'); 
