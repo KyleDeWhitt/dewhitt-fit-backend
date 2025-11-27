@@ -29,8 +29,9 @@ const PORT = 3000;
 // ------------------------------------------------------------------
 // --- 1. Middleware Setup ---
 // ------------------------------------------------------------------
-app.use(cors({ origin: 'http://localhost:5173, 'https://shiny-croquembouche-2237d6.netlify.app'' })); 
-app.use(express.json());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://shiny-croquembouche-2237d6.netlify.app']
+}));app.use(express.json());
 
 // ------------------------------------------------------------------
 // --- 0. Sequelize Model Associations ---
