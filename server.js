@@ -1,18 +1,24 @@
 // server.js
 require('dotenv').config(); 
 
+// 1. 👇 ADDED: Stripe Initialization
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 const express = require('express');
 const cors = require('cors'); 
-const helmet = require('helmet'); // <--- 1. Security Headers
-const rateLimit = require('express-rate-limit'); // <--- 2. Rate Limiting
+const helmet = require('helmet'); 
+const rateLimit = require('express-rate-limit'); 
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
 
 // --- Database Imports ---
-const { connectDB } = require('./config/database'); 
+const { connectDB, sequelize } = require('./config/database'); 
 const User = require('./models/User.js');  
 const Goal = require('./models/Goal.js'); 
 const Log = require('./models/Log.js');    
+
+// 2. 👇 ADDED: Import 'protect' middleware (Required for the checkout route)
+const { protect } = require('./middleware/auth'); 
 
 const goalRoutes = require('./routes/goalRoutes'); 
 const logRoutes = require('./routes/logRoutes');
@@ -25,24 +31,20 @@ const PORT = process.env.PORT || 3000;
 // --- SECURITY MIDDLEWARE (The Bulletproof Layer) ---
 // ------------------------------------------------------------------
 
-// 1. Helmet: Hides tech stack and adds security headers
 app.use(helmet());
 
-// 2. CORS: Allow requests only from your specific domains
 app.use(cors({
     origin: ['http://localhost:5173', 'https://shiny-croquembouche-2237d6.netlify.app'],
     credentials: true
 }));
 
-// 3. Rate Limiter: Prevent brute-force attacks (Limit: 100 requests per 15 min)
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	max: 100, // Limit each IP to 100 requests per windowMs
+	windowMs: 15 * 60 * 1000, 
+	max: 100, 
     message: { success: false, message: "Too many requests, please try again later." }
 });
 app.use(limiter);
 
-// 4. Parse JSON bodies
 app.use(express.json());
 
 
@@ -60,7 +62,7 @@ Log.belongsTo(User, { foreignKey: 'userId' });
 // ------------------------------------------------------------------
 
 // Registration
-app.post('/register', async (req, res, next) => { // Added 'next'
+app.post('/register', async (req, res, next) => { 
     try {
         const { email, password, first_name, last_name, role } = req.body;
         
@@ -102,12 +104,12 @@ app.post('/register', async (req, res, next) => { // Added 'next'
         });
 
     } catch (error) {
-        next(error); // Pass error to Global Error Handler
+        next(error); 
     }
 });
 
 // Login
-app.post('/login', async (req, res, next) => { // Added 'next'
+app.post('/login', async (req, res, next) => { 
     try {
         const { email, password } = req.body;
         
@@ -139,9 +141,44 @@ app.post('/login', async (req, res, next) => { // Added 'next'
         });
 
     } catch (error) {
-        next(error); // Pass error to Global Error Handler
+        next(error); 
     }
 });
+
+// ------------------------------------------------------------------
+// --- 3. 💰 NEW STRIPE CHECKOUT ROUTE ---
+// ------------------------------------------------------------------
+app.post('/api/create-checkout-session', protect, async (req, res, next) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'subscription',
+            line_items: [
+                {
+                    // 👇 Your Actual Price ID from the Dashboard
+                    price: 'price_1SYpvSFPtgePKWbHVDFIdjxa', 
+                    quantity: 1,
+                },
+            ],
+            // Redirect URLs (Frontend)
+            success_url: `${process.env.CLIENT_URL}/dashboard?success=true`,
+            cancel_url: `${process.env.CLIENT_URL}/dashboard?canceled=true`,
+            
+            // Auto-fill user email in checkout
+            customer_email: req.user.email,
+            
+            // Track who bought this
+            metadata: {
+                userId: req.user.id
+            }
+        });
+
+        res.json({ url: session.url });
+    } catch (error) {
+        next(error); // Pass to global error handler
+    }
+});
+
 
 // Feature Routes
 app.use('/api/goals', goalRoutes); 
@@ -151,9 +188,8 @@ app.use('/api/user', userRoutes);
 // ------------------------------------------------------------------
 // --- GLOBAL ERROR HANDLER (The Safety Net) ---
 // ------------------------------------------------------------------
-// This must be the LAST app.use()
 app.use((err, req, res, next) => {
-    console.error('🔥 Global Error Catch:', err.stack); // Log the error for you
+    console.error('🔥 Global Error Catch:', err.stack); 
     res.status(500).json({ 
         success: false, 
         message: 'Something went wrong on the server. Please try again later.' 
@@ -166,6 +202,12 @@ app.use((err, req, res, next) => {
 const startServer = async () => {
     try {
         await connectDB(); 
+
+        if (sequelize) {
+            await sequelize.sync({ alter: true });
+            console.log('✅ Database tables updated successfully!');
+        }
+
         app.listen(PORT, () => {
             console.log(`\nServer running securely on http://localhost:${PORT}`);
         });

@@ -1,53 +1,54 @@
-// models/User.js (UPDATED with Profile Metrics)
-
+// models/User.js
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../config/database'); 
+const { sequelize } = require('../config/database');
 
 const User = sequelize.define('User', {
-    // Core Identity Fields
-    email: {
-        type: DataTypes.STRING,
-        allowNull: true,
-        unique: true
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false,
+    id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true
     },
     first_name: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: false
     },
     last_name: {
         type: DataTypes.STRING,
+        allowNull: false
+    },
+    email: {
+        type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
+        validate: {
+            isEmail: true
+        }
+    },
+    password: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
     role: {
-        type: DataTypes.ENUM('Member', 'Admin'),
-        defaultValue: 'Member',
-        allowNull: false,
+        type: DataTypes.STRING,
+        defaultValue: 'Member'
     },
-    
-    // 🆕 New Profile Metrics Fields
-    height: {
-        type: DataTypes.INTEGER, // Stored in inches or cm, based on front-end conversion
-        allowNull: true,
+    // --- 💰 NEW MEMBERSHIP FIELDS ---
+    subscriptionStatus: {
+        type: DataTypes.ENUM('active', 'inactive', 'past_due', 'canceled'),
+        defaultValue: 'inactive'
     },
-    currentWeight: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
+    planTier: {
+        type: DataTypes.ENUM('free', 'premium'),
+        defaultValue: 'free'
     },
-    goalWeight: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
+    stripeCustomerId: {
+        type: DataTypes.STRING,
+        allowNull: true // Will be null until they checkout
     },
-    unit: {
-        type: DataTypes.ENUM('lbs', 'kg'),
-        allowNull: true,
-    },
-}, {
-    // Ensure timestamps are disabled if you don't use them
-    timestamps: false, 
+    currentPeriodEnd: {
+        type: DataTypes.DATE,
+        allowNull: true // When their current month expires
+    }
 });
 
 module.exports = User;
